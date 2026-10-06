@@ -31,10 +31,12 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
@@ -47,11 +49,11 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     
-    // FFmpeg Kit for video rendering
-    implementation("com.arthenica:ffmpeg-kit-full:6.0-2")
+    // ✅ CORRECTED: Actively maintained FFmpeg Kit fork (replaces retired com.arthenica)
+    implementation("dev.ffmpegkit-maintained:ffmpeg-kit-full:8.1.7")
     
-    // Sherpa ONNX for Piper TTS
-    implementation("com.k2fsa.sherpa.onnx:sherpa-onnx:1.10.30")
+    // ✅ CORRECTED: Sherpa ONNX via JitPack (Notice the "github" in the group ID)
+    implementation("com.github.k2-fsa:sherpa-onnx:1.13.8")
     
     // OkHttp for downloading models
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
