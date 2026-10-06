@@ -1,10 +1,9 @@
 package com.autocapvideo.app
 
-import android.content.ContentValues
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
-import android.provider.MediaStore
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -88,25 +87,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ✅ CRASH-PROOF: Saves to app-specific external directory (No permission crashes on Android 10+)
     private fun saveToGallery(filePath: String) {
-        val file = File(filePath)
-        val resolver = contentResolver
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, "autocap_${System.currentTimeMillis()}.mp4")
-            put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES)
-        }
-        
-        val uri: Uri? = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
-        uri?.let {
-            resolver.openOutputStream(it).use { outputStream ->
-                file.inputStream().use { inputStream ->
-                    inputStream.copyTo(outputStream!!)
-                }
+        try {
+            val sourceFile = File(filePath)
+            if (!sourceFile.exists()) {
+                Toast.makeText(this, "Video file not found", Toast.LENGTH_SHORT).show()
+                return
             }
-            Toast.makeText(this, "Saved to Gallery!", Toast.LENGTH_SHORT).show()
-        } ?: run {
-            Toast.makeText(this, "Failed to save", Toast.LENGTH_SHORT).show()
+
+            val destDir = getExternalFilesDir(Environment.DIRECTORY_MOVIES)
+            if (destDir != null && !destDir.exists()) {
+                destDir.mkdirs()
+            }
+
+            val destFile = File(destDir, "AutoCap_${System.currentTimeMillis()}.mp4")
+            sourceFile.copyTo(destFile, overwrite = true)
+
+            Toast.makeText(this, "Saved to: ${destFile.absolutePath}", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Save failed", e)
+            Toast.makeText(this, "Failed to save video", Toast.LENGTH_SHORT).show()
         }
     }
 }
