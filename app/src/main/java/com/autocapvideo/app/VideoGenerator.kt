@@ -59,12 +59,10 @@ class VideoGenerator(private val context: Context) {
                     ruleFsts = "",
                     maxNumSentences = 1
                 )
-                // ✅ CORRECTED: Pass assetManager and config as named parameters
                 val tts = OfflineTts(assetManager = context.assets, config = config)
 
                 onProgress("Generating Speech Audio...")
                 val audioFile = File(context.filesDir, "output.wav")
-                // ✅ CORRECTED: Use named parameters for generate
                 val audio = tts.generate(text = text, sid = 0, speed = 1.0f)
                 audio.save(audioFile.absolutePath)
 
@@ -76,7 +74,6 @@ class VideoGenerator(private val context: Context) {
                 val outputFile = File(context.getExternalFilesDir(null), "autocap_video.mp4")
                 val fontDir = context.filesDir.absolutePath
                 
-                // ✅ CORRECTED: sampleRate is a function
                 val duration = audio.samples.size.toDouble() / tts.sampleRate()
                 val ffmpegCmd = "-y -f lavfi -i color=c=black:s=1080x1920:d=$duration " +
                         "-i '${audioFile.absolutePath}' " +
@@ -109,8 +106,8 @@ class VideoGenerator(private val context: Context) {
         return destFile
     }
 
-    private fun generatePerfectSRT(originalText: String, audioPath: String, modelPath: String, srtPath: String) {
-        // ✅ CORRECTED: Use the official, simple Whisper Android API
+    // ✅ FIXED: Made this a suspend function and uses guaranteed segment-level timestamps
+    private suspend fun generatePerfectSRT(originalText: String, audioPath: String, modelPath: String, srtPath: String) {
         val model = Whisper.loadModel(context, modelPath)
         val config = WhisperConfig(language = "en")
         val result = Whisper.transcribe(model, audioPath, config)
@@ -118,29 +115,14 @@ class VideoGenerator(private val context: Context) {
         val sb = StringBuilder()
         var index = 1
         
-        // Try word-level first
+        // Use segment-level timestamps (guaranteed to exist in the API)
         result.segments.forEach { segment ->
-            segment.words?.forEach { word ->
-                val wordText = word.text.trim().replace(Regex("\\s+"), "")
-                if (wordText.isNotEmpty()) {
-                    val start = formatTimeMs(word.startMs.toDouble())
-                    val end = formatTimeMs(word.endMs.toDouble())
-                    sb.append("$index\n$start --> $end\n$wordText\n\n")
-                    index++
-                }
-            }
-        }
-        
-        // Fallback to segment-level if words are null/empty
-        if (sb.isEmpty()) {
-            result.segments.forEach { segment ->
-                val text = segment.text.trim()
-                if (text.isNotEmpty()) {
-                    val start = formatTimeMs(segment.startMs.toDouble())
-                    val end = formatTimeMs(segment.endMs.toDouble())
-                    sb.append("$index\n$start --> $end\n$text\n\n")
-                    index++
-                }
+            val text = segment.text.trim()
+            if (text.isNotEmpty()) {
+                val start = formatTimeMs(segment.startMs.toDouble())
+                val end = formatTimeMs(segment.endMs.toDouble())
+                sb.append("$index\n$start --> $end\n$text\n\n")
+                index++
             }
         }
         
