@@ -51,7 +51,7 @@ dependencies {
     implementation("com.arthenica:ffmpeg-kit-full:6.0-2")
     
     // Sherpa ONNX for Piper TTS
-    implementation("com.k2fsa.sherpa.onnx:sherpa-onnx:1.10.0")
+    implementation("com.k2fsa.sherpa.onnx:sherpa-onnx:1.10.30")
     
     // OkHttp for downloading models
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
