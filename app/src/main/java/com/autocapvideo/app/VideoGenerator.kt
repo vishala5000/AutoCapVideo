@@ -14,8 +14,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.util.zip.ZipInputStream
-
-// Import Whisper Android API
 import dev.ffmpegkit.whisper.Whisper
 import dev.ffmpegkit.whisper.WhisperParams
 import dev.ffmpegkit.whisper.WhisperSamplingStrategy
@@ -125,14 +123,13 @@ class VideoGenerator(private val context: Context) {
         val params = WhisperParams().apply {
             strategy = WhisperSamplingStrategy.WHISPER_SAMPLING_GREEDY
             printProgress = false
-            wordTimestamps = true // ✅ Enables millisecond-accurate word boundaries
+            wordTimestamps = true
         }
 
         val result = whisper.fullTranscribe(audioPath, params)
         val sb = StringBuilder()
         var index = 1
         
-        // Parse word-level segments from Whisper
         result.segments.forEach { segment ->
             segment.words?.forEach { word ->
                 val wordText = word.text.trim().replace(Regex("\\s+"), "")
@@ -145,7 +142,6 @@ class VideoGenerator(private val context: Context) {
             }
         }
         
-        // Fallback: If Whisper word timestamps fail, split the original text evenly as a backup
         if (sb.isEmpty()) {
             Log.w("VideoGenerator", "Whisper word timestamps empty, falling back to even split.")
             val words = originalText.split("\\s+".toRegex()).filter { it.isNotEmpty() }
