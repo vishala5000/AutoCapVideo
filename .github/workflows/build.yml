@@ -1,4 +1,4 @@
-name: Build and Auto-Sign APK
+name: Build and Auto-Sign APK (No Secrets)
 
 on:
   push:
@@ -18,29 +18,33 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Generate Temporary Keystore
+      - name: Generate Temporary Keystore On-The-Fly
         run: |
-          keytool -genkey -v -keystore temp_release.keystore -alias mykey -keyalg RSA -keysize 2048 -validity 10000 -storepass temp1234 -keypass temp1234 -dname "CN=AutoCapVideo, OU=Dev, O=AutoCap, L=City, S=State, C=US"
+          keytool -genkey -v \
+            -keystore temp_release.keystore \
+            -alias my_temp_key \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass temp1234 \
+            -keypass temp1234 \
+            -dname "CN=AutoCapVideo, OU=Personal, O=YouTube, L=City, S=State, C=US"
+          
           echo "KEYSTORE_PATH=temp_release.keystore" >> $GITHUB_ENV
           echo "KEYSTORE_PASSWORD=temp1234" >> $GITHUB_ENV
-          echo "KEY_ALIAS=mykey" >> $GITHUB_ENV
+          echo "KEY_ALIAS=my_temp_key" >> $GITHUB_ENV
           echo "KEY_PASSWORD=temp1234" >> $GITHUB_ENV
 
-      - name: Fix Gradle Wrapper
+      - name: Fix Gradle Wrapper Permissions
         run: |
-          # Safety: remove gradlew if it's a directory
           [ -d "gradlew" ] && rm -rf gradlew
-          # Ensure it's executable
           chmod +x gradlew
-          # Verify
-          ls -la gradlew
-          file gradlew
 
-      - name: Build Release APK
+      - name: Build and Auto-Sign Release APK
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK Artifact
+      - name: Upload Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AutoCapVideo-Release
+          name: AutoCapVideo-Signed-APK
           path: app/build/outputs/apk/release/app-release.apk
