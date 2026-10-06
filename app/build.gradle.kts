@@ -41,7 +41,7 @@ android {
         jvmTarget = "17"
     }
 
-    // ✅ FIX: Resolves native library conflicts between FFmpeg and Whisper (Updated syntax)
+    // ✅ CRASH-PROOF: Safely resolves native library conflicts
     packaging {
         jniLibs.pickFirsts.add("lib/arm64-v8a/libc++_shared.so")
         jniLibs.pickFirsts.add("lib/armeabi-v7a/libc++_shared.so")
@@ -57,13 +57,13 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     
-    // ✅ FFmpeg Kit (Actively maintained fork)
+    // ✅ FFmpeg Kit (Actively maintained, no NDK required)
     implementation("dev.ffmpegkit-maintained:ffmpeg-kit-full:8.1.7")
     
-    // ✅ Android-compatible Whisper.cpp (No NDK required)
+    // ✅ Whisper Android (Prebuilt, clean Kotlin API)
     implementation("dev.ffmpegkit-maintained:whisper-android:1.0.0")
     
-    // ✅ Sherpa ONNX for Piper TTS (Exclude JVM version to prevent duplicate class errors)
+    // ✅ Sherpa ONNX (Excludes JVM version to prevent duplicate class crashes)
     implementation("com.github.k2-fsa:sherpa-onnx:1.13.8") {
         exclude(group = "com.github.k2-fsa.sherpa-onnx", module = "sherpa-onnx-jvm")
     }
