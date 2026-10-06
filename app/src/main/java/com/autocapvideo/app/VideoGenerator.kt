@@ -44,6 +44,16 @@ class VideoGenerator(private val context: Context) {
                     }
                 }
 
+                onProgress("Preparing custom font...")
+                val fontFile = File(context.filesDir, "font.ttf")
+                if (!fontFile.exists()) {
+                    try {
+                        context.assets.open("font.ttf").use { it.copyTo(fontFile.outputStream()) }
+                    } catch (e: Exception) {
+                        Log.w("VideoGenerator", "font.ttf not found in assets, falling back to default system font.")
+                    }
+                }
+
                 onProgress("Initializing Neural TTS...")
                 val config = OfflineTtsConfig(
                     model = OfflineTtsModelConfig(
@@ -77,11 +87,16 @@ class VideoGenerator(private val context: Context) {
                 onProgress("Rendering YouTube Shorts Video (1080x1920)...")
                 val outputFile = File(context.getExternalFilesDir(null), "autocap_video.mp4")
                 
+                // Point FFmpeg to the directory where we extracted font.ttf
+                val fontDir = context.filesDir.absolutePath
+                
                 // MarginL=200 + MarginR=200 = 400. 1080 - 400 = 680px text wrap width.
                 // MarginV=300 ensures it sits nicely within the 1320px height area.
+                // IMPORTANT: Change 'CustomFont' below to the ACTUAL internal name of your font 
+                // (e.g., 'Montserrat', 'Roboto-Bold', 'Bangers'). You can check this on your PC.
                 val ffmpegCmd = "-y -f lavfi -i color=c=black:s=1080x1920:d=$duration " +
                         "-i '${audioFile.absolutePath}' " +
-                        "-vf \"subtitles=filename='${srtFile.absolutePath}':force_style='FontSize=32,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
+                        "-vf \"subtitles=filename='${srtFile.absolutePath}':fontsdir='$fontDir':force_style='FontSize=36,FontName=CustomFont,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
                         "-c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest '${outputFile.absolutePath}'"
 
                 val session = FFmpegKit.execute(ffmpegCmd)
@@ -139,7 +154,6 @@ class VideoGenerator(private val context: Context) {
         ZipInputStream(inputStream).use { zis ->
             var ze = zis.nextEntry
             while (ze != null) {
-                // Handle nested directories safely
                 val fileName = ze.name.substringAfter("/")
                 if (fileName.isNotEmpty()) {
                     val file = File(destDir, fileName)
