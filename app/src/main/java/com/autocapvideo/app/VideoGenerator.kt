@@ -92,7 +92,7 @@ class VideoGenerator(private val context: Context) {
                 
                 // MarginL=200 + MarginR=200 = 400. 1080 - 400 = 680px text wrap width.
                 // MarginV=300 ensures it sits nicely within the 1320px height area.
-                // FontName is set to "Poppins ExtraBold" to match your custom font.
+                // FontName is explicitly set to "Poppins ExtraBold" to match your custom font.
                 val ffmpegCmd = "-y -f lavfi -i color=c=black:s=1080x1920:d=$duration " +
                         "-i '${audioFile.absolutePath}' " +
                         "-vf \"subtitles=filename='${srtFile.absolutePath}':fontsdir='$fontDir':force_style='FontSize=36,FontName=Poppins ExtraBold,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
