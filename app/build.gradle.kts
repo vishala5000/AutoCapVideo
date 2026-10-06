@@ -40,6 +40,14 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    // ✅ ADD THIS BLOCK: Resolves native library conflicts between FFmpeg and Whisper
+    packaging {
+        pickFirst("lib/arm64-v8a/libc++_shared.so")
+        pickFirst("lib/armeabi-v7a/libc++_shared.so")
+        pickFirst("lib/x86/libc++_shared.so")
+        pickFirst("lib/x86_64/libc++_shared.so")
+    }
 }
 
 dependencies {
