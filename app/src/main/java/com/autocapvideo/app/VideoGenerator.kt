@@ -15,6 +15,11 @@ import okhttp3.Request
 import java.io.File
 import java.util.zip.ZipInputStream
 
+// Import Whisper Android API
+import dev.ffmpegkit.whisper.Whisper
+import dev.ffmpegkit.whisper.WhisperParams
+import dev.ffmpegkit.whisper.WhisperSamplingStrategy
+
 class VideoGenerator(private val context: Context) {
 
     suspend fun generate(text: String, onProgress: (String) -> Unit, onComplete: (String?) -> Unit) {
@@ -28,6 +33,12 @@ class VideoGenerator(private val context: Context) {
                 downloadIfNeeded(
                     "https://github.com/vishala5000/AutoCapVideo/releases/download/ljspeech/en_US-ljspeech-medium.onnx.json",
                     "ljspeech.json"
+                )
+
+                onProgress("Downloading Whisper Tiny model for perfect caption sync...")
+                val whisperModelFile = downloadIfNeeded(
+                    "https://github.com/vishala5000/AutoCapVideo/releases/download/ljspeech/ggml-tiny.en.bin",
+                    "ggml-tiny.en.bin"
                 )
 
                 onProgress("Preparing TTS assets...")
@@ -79,20 +90,15 @@ class VideoGenerator(private val context: Context) {
                 val audio = tts.generate(text, speakerId = 0, speed = 1.0f)
                 tts.save(audio, audioFile.absolutePath)
 
-                onProgress("Generating Auto-Captions...")
+                onProgress("Generating Perfectly Synced Auto-Captions (Whisper)...")
                 val srtFile = File(context.filesDir, "captions.srt")
-                val duration = audio.samples.size.toDouble() / tts.sampleRate
-                generateSRT(text, srtFile.absolutePath, duration)
+                generatePerfectSRT(text, audioFile.absolutePath, whisperModelFile.absolutePath, srtFile.absolutePath)
 
                 onProgress("Rendering YouTube Shorts Video (1080x1920)...")
                 val outputFile = File(context.getExternalFilesDir(null), "autocap_video.mp4")
-                
-                // Point FFmpeg to the directory where we extracted font.ttf
                 val fontDir = context.filesDir.absolutePath
                 
-                // MarginL=200 + MarginR=200 = 400. 1080 - 400 = 680px text wrap width.
-                // MarginV=300 ensures it sits nicely within the 1320px height area.
-                // FontName is explicitly set to "Poppins ExtraBold" to match your custom font.
+                val duration = audio.samples.size.toDouble() / tts.sampleRate
                 val ffmpegCmd = "-y -f lavfi -i color=c=black:s=1080x1920:d=$duration " +
                         "-i '${audioFile.absolutePath}' " +
                         "-vf \"subtitles=filename='${srtFile.absolutePath}':fontsdir='$fontDir':force_style='FontSize=36,FontName=Poppins ExtraBold,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
@@ -112,18 +118,50 @@ class VideoGenerator(private val context: Context) {
         }
     }
 
-    private fun generateSRT(text: String, srtPath: String, totalDuration: Double) {
-        val words = text.split("\\s+".toRegex()).filter { it.isNotEmpty() }
-        val durationPerWord = totalDuration / words.size.coerceAtLeast(1)
-        val sb = StringBuilder()
-        var currentTime = 0.0
-        for ((index, word) in words.withIndex()) {
-            val start = formatTime(currentTime)
-            currentTime += durationPerWord
-            val end = formatTime(currentTime)
-            sb.append("${index + 1}\n$start --> $end\n$word\n\n")
+    private fun generatePerfectSRT(originalText: String, audioPath: String, modelPath: String, srtPath: String) {
+        val whisper = Whisper()
+        whisper.initContext(modelPath)
+        
+        val params = WhisperParams().apply {
+            strategy = WhisperSamplingStrategy.WHISPER_SAMPLING_GREEDY
+            printProgress = false
+            wordTimestamps = true // ✅ Enables millisecond-accurate word boundaries
         }
+
+        val result = whisper.fullTranscribe(audioPath, params)
+        val sb = StringBuilder()
+        var index = 1
+        
+        // Parse word-level segments from Whisper
+        result.segments.forEach { segment ->
+            segment.words?.forEach { word ->
+                val wordText = word.text.trim().replace(Regex("\\s+"), "")
+                if (wordText.isNotEmpty()) {
+                    val start = formatTime(word.start)
+                    val end = formatTime(word.end)
+                    sb.append("$index\n$start --> $end\n$wordText\n\n")
+                    index++
+                }
+            }
+        }
+        
+        // Fallback: If Whisper word timestamps fail, split the original text evenly as a backup
+        if (sb.isEmpty()) {
+            Log.w("VideoGenerator", "Whisper word timestamps empty, falling back to even split.")
+            val words = originalText.split("\\s+".toRegex()).filter { it.isNotEmpty() }
+            val duration = result.duration
+            val durationPerWord = duration / words.size.coerceAtLeast(1)
+            var currentTime = 0.0
+            for ((i, word) in words.withIndex()) {
+                val start = formatTime(currentTime)
+                currentTime += durationPerWord
+                val end = formatTime(currentTime)
+                sb.append("${i + 1}\n$start --> $end\n$word\n\n")
+            }
+        }
+        
         File(srtPath).writeText(sb.toString())
+        whisper.freeContext()
     }
 
     private fun formatTime(seconds: Double): String {
