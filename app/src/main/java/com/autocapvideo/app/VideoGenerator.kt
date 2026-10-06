@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.util.zip.ZipInputStream
 
 class VideoGenerator(private val context: Context) {
 
@@ -79,9 +80,9 @@ class VideoGenerator(private val context: Context) {
                 // MarginL=200 + MarginR=200 = 400. 1080 - 400 = 680px text wrap width.
                 // MarginV=300 ensures it sits nicely within the 1320px height area.
                 val ffmpegCmd = "-y -f lavfi -i color=c=black:s=1080x1920:d=$duration " +
-                        "-i ${audioFile.absolutePath} " +
-                        "-vf \"subtitles=${srtFile.absolutePath}:force_style='FontSize=32,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
-                        "-c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest ${outputFile.absolutePath}"
+                        "-i '${audioFile.absolutePath}' " +
+                        "-vf \"subtitles=filename='${srtFile.absolutePath}':force_style='FontSize=32,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
+                        "-c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest '${outputFile.absolutePath}'"
 
                 val session = FFmpegKit.execute(ffmpegCmd)
                 if (ReturnCode.isSuccess(session.returnCode)) {
@@ -135,15 +136,19 @@ class VideoGenerator(private val context: Context) {
     }
 
     private fun extractZip(inputStream: java.io.InputStream, destDir: File) {
-        java.util.zip.ZipInputStream(inputStream).use { zis ->
+        ZipInputStream(inputStream).use { zis ->
             var ze = zis.nextEntry
             while (ze != null) {
-                val file = File(destDir, ze.name)
-                if (ze.isDirectory) {
-                    file.mkdirs()
-                } else {
-                    file.parentFile?.mkdirs()
-                    file.outputStream().use { fos -> zis.copyTo(fos) }
+                // Handle nested directories safely
+                val fileName = ze.name.substringAfter("/")
+                if (fileName.isNotEmpty()) {
+                    val file = File(destDir, fileName)
+                    if (ze.isDirectory) {
+                        file.mkdirs()
+                    } else {
+                        file.parentFile?.mkdirs()
+                        file.outputStream().use { fos -> zis.copyTo(fos) }
+                    }
                 }
                 ze = zis.nextEntry
             }
