@@ -44,7 +44,7 @@ class VideoGenerator(private val context: Context) {
                     }
                 }
 
-                onProgress("Preparing custom font...")
+                onProgress("Preparing Poppins ExtraBold font...")
                 val fontFile = File(context.filesDir, "font.ttf")
                 if (!fontFile.exists()) {
                     try {
@@ -92,11 +92,10 @@ class VideoGenerator(private val context: Context) {
                 
                 // MarginL=200 + MarginR=200 = 400. 1080 - 400 = 680px text wrap width.
                 // MarginV=300 ensures it sits nicely within the 1320px height area.
-                // IMPORTANT: Change 'CustomFont' below to the ACTUAL internal name of your font 
-                // (e.g., 'Montserrat', 'Roboto-Bold', 'Bangers'). You can check this on your PC.
+                // FontName is set to "Poppins ExtraBold" to match your custom font.
                 val ffmpegCmd = "-y -f lavfi -i color=c=black:s=1080x1920:d=$duration " +
                         "-i '${audioFile.absolutePath}' " +
-                        "-vf \"subtitles=filename='${srtFile.absolutePath}':fontsdir='$fontDir':force_style='FontSize=36,FontName=CustomFont,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
+                        "-vf \"subtitles=filename='${srtFile.absolutePath}':fontsdir='$fontDir':force_style='FontSize=36,FontName=Poppins ExtraBold,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,MarginV=300,MarginL=200,MarginR=200,WrapStyle=0'\" " +
                         "-c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest '${outputFile.absolutePath}'"
 
                 val session = FFmpegKit.execute(ffmpegCmd)
