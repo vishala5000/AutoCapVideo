@@ -26,11 +26,18 @@ jobs:
           echo "KEY_ALIAS=mykey" >> $GITHUB_ENV
           echo "KEY_PASSWORD=temp1234" >> $GITHUB_ENV
 
-      - name: Grant Execute Permission for Gradle
-        run: chmod +x gradlew
+      - name: Fix Gradle Wrapper
+        run: |
+          # Safety: remove gradlew if it's a directory
+          [ -d "gradlew" ] && rm -rf gradlew
+          # Ensure it's executable
+          chmod +x gradlew
+          # Verify
+          ls -la gradlew
+          file gradlew
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
