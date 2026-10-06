@@ -1,4 +1,4 @@
-name: Build and Auto-Sign APK (No Secrets)
+name: Build and Auto-Sign APK (Bundled Models)
 
 on:
   push:
@@ -18,10 +18,30 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Download Large AI Models and Bundle into Assets
+        run: |
+          mkdir -p app/src/main/assets
+          
+          echo "Downloading Piper TTS model..."
+          curl -L -o app/src/main/assets/en_US-ljspeech-medium.onnx \
+            https://github.com/vishala5000/AutoCapVideo/releases/download/ljspeech/en_US-ljspeech-medium.onnx
+          
+          echo "Downloading Piper TTS config..."
+          curl -L -o app/src/main/assets/en_US-ljspeech-medium.onnx.json \
+            https://github.com/vishala5000/AutoCapVideo/releases/download/ljspeech/en_US-ljspeech-medium.onnx.json
+          
+          echo "Downloading Whisper Tiny model..."
+          curl -L -o app/src/main/assets/ggml-tiny.en.bin \
+            https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin
+          
+          echo "All models downloaded successfully!"
+          ls -lh app/src/main/assets/
+
       - name: Generate Temporary Keystore On-The-Fly
         run: |
+          # Generate directly in the app/ folder so Gradle finds it
           keytool -genkey -v \
-            -keystore temp_release.keystore \
+            -keystore app/temp_release.keystore \
             -alias my_temp_key \
             -keyalg RSA \
             -keysize 2048 \
@@ -41,10 +61,12 @@ jobs:
           chmod +x gradlew
 
       - name: Build and Auto-Sign Release APK
+        env:
+          GRADLE_OPTS: "-Xmx4g"
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AutoCapVideo-Signed-APK
+          name: AutoCapVideo-Fully-Offline-Signed-APK
           path: app/build/outputs/apk/release/app-release.apk
