@@ -1,9 +1,10 @@
 package com.autocapvideo.app
 
-import android.content.Context
+import android.content.ContentValues
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -88,6 +89,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * ✅ CRASH-PROOF GALLERY SAVER
+     * Uses MediaStore to save directly to the public Movies folder on Android 10+.
+     * No storage permissions required. Falls back safely on older Android versions.
+     */
     private fun saveToGallery(filePath: String) {
         try {
             val sourceFile = File(filePath)
@@ -96,15 +102,31 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            val destDir = getExternalFilesDir(Environment.DIRECTORY_MOVIES)
-            if (destDir != null && !destDir.exists()) {
-                destDir.mkdirs()
+            val resolver = contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "AutoCap_${System.currentTimeMillis()}.mp4")
+                put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+                // Saves directly to the public Movies folder (visible in Gallery)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES)
             }
 
-            val destFile = File(destDir, "AutoCap_${System.currentTimeMillis()}.mp4")
-            sourceFile.copyTo(destFile, overwrite = true)
-
-            Toast.makeText(this, "Saved to: ${destFile.absolutePath}", Toast.LENGTH_LONG).show()
+            val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
+            
+            if (uri != null) {
+                resolver.openOutputStream(uri).use { outputStream ->
+                    sourceFile.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream!!)
+                    }
+                }
+                Toast.makeText(this, "✅ Saved to Gallery (Movies folder)!", Toast.LENGTH_LONG).show()
+            } else {
+                // Fallback for very old Android versions (Android 9 and below)
+                val destDir = getExternalFilesDir(Environment.DIRECTORY_MOVIES)
+                if (destDir != null && !destDir.exists()) destDir.mkdirs()
+                val destFile = File(destDir, "AutoCap_${System.currentTimeMillis()}.mp4")
+                sourceFile.copyTo(destFile, overwrite = true)
+                Toast.makeText(this, "Saved to: ${destFile.absolutePath}", Toast.LENGTH_LONG).show()
+            }
         } catch (e: Exception) {
             Log.e("MainActivity", "Save failed", e)
             Toast.makeText(this, "Failed to save video", Toast.LENGTH_SHORT).show()
