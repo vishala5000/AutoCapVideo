@@ -41,12 +41,12 @@ android {
         jvmTarget = "17"
     }
 
-    // ✅ FIX: Resolves native library conflicts between FFmpeg and Whisper
+    // ✅ FIX: Resolves native library conflicts between FFmpeg and Whisper (Updated syntax)
     packaging {
-        pickFirst("lib/arm64-v8a/libc++_shared.so")
-        pickFirst("lib/armeabi-v7a/libc++_shared.so")
-        pickFirst("lib/x86/libc++_shared.so")
-        pickFirst("lib/x86_64/libc++_shared.so")
+        jniLibs.pickFirsts.add("lib/arm64-v8a/libc++_shared.so")
+        jniLibs.pickFirsts.add("lib/armeabi-v7a/libc++_shared.so")
+        jniLibs.pickFirsts.add("lib/x86/libc++_shared.so")
+        jniLibs.pickFirsts.add("lib/x86_64/libc++_shared.so")
     }
 }
 
@@ -67,7 +67,4 @@ dependencies {
     implementation("com.github.k2-fsa:sherpa-onnx:1.13.8") {
         exclude(group = "com.github.k2-fsa.sherpa-onnx", module = "sherpa-onnx-jvm")
     }
-    
-    // OkHttp for downloading models
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
