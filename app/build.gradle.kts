@@ -49,11 +49,16 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     
-    // ✅ CORRECTED: Actively maintained FFmpeg Kit fork (replaces retired com.arthenica)
+    // ✅ FFmpeg Kit (Actively maintained fork)
     implementation("dev.ffmpegkit-maintained:ffmpeg-kit-full:8.1.7")
     
-    // ✅ CORRECTED: Sherpa ONNX via JitPack (Notice the "github" in the group ID)
-    implementation("com.github.k2-fsa:sherpa-onnx:1.13.8")
+    // ✅ Android-compatible Whisper.cpp (No NDK required)
+    implementation("dev.ffmpegkit-maintained:whisper-android:1.0.0")
+    
+    // ✅ Sherpa ONNX for Piper TTS (Exclude JVM version to prevent duplicate class errors)
+    implementation("com.github.k2-fsa:sherpa-onnx:1.13.8") {
+        exclude(group = "com.github.k2-fsa.sherpa-onnx", module = "sherpa-onnx-jvm")
+    }
     
     // OkHttp for downloading models
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
